@@ -141,6 +141,7 @@ static void    App_HandleMcpsInput( mcpsToNwkMessage_t *pMsgIn );
 static void    App_HandleMessage  ( mcpsToNwkMessage_t *pMsgIn );
 static void    App_SendPredefinedMessage( void );
 static void    App_SendSensorStatus( void );
+static void    App_SendInformation();
 static void    App_ReceiveData     ( void );
 static bool_t  App_Idle            ( void );
 static void    App_UpdateLEDs( uint8_t val );
@@ -571,7 +572,9 @@ void AppThread(uint32_t argument)
 
             if( ev & gAppEvtSendSensorData_c )
             {
-                App_SendSensorStatus();
+                Serial_Print( mInterfaceId,"marj>> Sending Information", gAllowToBlock_d );
+                Serial_Print( mInterfaceId,".\n\r", gAllowToBlock_d );
+                App_SendInformation();
             }
         }
 
@@ -1131,6 +1134,57 @@ static void App_SendSensorStatus( void )
         mpPacket->msgData.dataReq.pMsdu[6] = (uint8_t)dummyAccelData[2];
         mpPacket->msgData.dataReq.pMsdu[7] = (uint8_t)dummyPressure;
         mpPacket->msgData.dataReq.pMsdu[8] = (uint8_t)dummyBatteryLevel;
+        /* Request MAC level acknowledgment of the data packet */
+        mpPacket->msgData.dataReq.txOptions = gMacTxOptionsAck_c;
+        /* Give the data packet a handle. The handle is
+        returned in the MCPS-Data Confirm message. */
+        mpPacket->msgData.dataReq.msduHandle = mMsduHandle++;
+        mpPacket->msgData.dataReq.securityLevel = gMacSecurityNone_c;
+        /* Send the Data Request to the MCPS */
+        (void)NWK_MCPS_SapHandler(mpPacket, mMacInstance);
+        /* Prepare for another data buffer */
+        mcPendingPackets++;
+    }
+}
+
+/******************************************************************************
+* The App_SendInformation() function will perform  satellite information transmissions of
+* to the coordinator.
+******************************************************************************/
+static void App_SendInformation( void )
+{
+    if( (mcPendingPackets < mMaxPendingDataPackets_c) && (mpPacket == NULL) )
+    {
+        /* If the maximum number of pending data buffes is below maximum limit
+        and we do not have a data buffer already then allocate one. */
+        mpPacket = MSG_Alloc(sizeof(nwkToMcpsMessage_t) + gMaxPHYPacketSize_c);
+    }
+
+    if( mpPacket != NULL )
+    {
+        /* Data was available in the serial terminal interface receive buffer. Now create an
+        MCPS-Data Request message containing the serial terminal interface data. */
+        mpPacket->msgType = gMcpsDataReq_c;
+        /* Create the header using coordinator information gained during
+        the scan procedure. Also use the short address we were assigned
+        by the coordinator during association. */
+        mpPacket->msgData.dataReq.pMsdu = (uint8_t*)(&(mpPacket->msgData.dataReq.pMsdu)) + sizeof(uint8_t*);
+
+        FLib_MemCpy(&mpPacket->msgData.dataReq.dstAddr, &mCoordInfo.coordAddress, 8);
+        FLib_MemCpy(&mpPacket->msgData.dataReq.srcAddr, &mAddress, 2);
+        FLib_MemCpy(&mpPacket->msgData.dataReq.dstPanId, &mCoordInfo.coordPanId, 2);
+        FLib_MemCpy(&mpPacket->msgData.dataReq.srcPanId, &mCoordInfo.coordPanId, 2);
+        mpPacket->msgData.dataReq.dstAddrMode = mCoordInfo.coordAddrMode;
+        mpPacket->msgData.dataReq.srcAddrMode = gAddrModeShortAddress_c;
+        mpPacket->msgData.dataReq.msduLength = 6;
+        // Signal to Coordinator that a sensor message follows
+        mpPacket->msgData.dataReq.pMsdu[0] = 0xFF;
+        // Put Satellite Information into the data packet
+        mpPacket->msgData.dataReq.pMsdu[1] = 0x01; /* marj: Satellite ID */
+        mpPacket->msgData.dataReq.pMsdu[2] = 0x34; /* Satellite Password 2 */
+        mpPacket->msgData.dataReq.pMsdu[3] = 0x12; /* Satellite Password 1 */
+        mpPacket->msgData.dataReq.pMsdu[4] = 0xCA; /* Message 2 */
+        mpPacket->msgData.dataReq.pMsdu[5] = 0xC0; /* Message 1 */
         /* Request MAC level acknowledgment of the data packet */
         mpPacket->msgData.dataReq.txOptions = gMacTxOptionsAck_c;
         /* Give the data packet a handle. The handle is
