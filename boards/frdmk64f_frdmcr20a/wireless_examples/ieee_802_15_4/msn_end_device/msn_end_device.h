@@ -50,7 +50,7 @@
 *************************************************************************************
 ************************************************************************************/
 
-#define mMacExtendedAddress_c    (0xFFFFFFFFFFFFFFF2)
+#define mMacExtendedAddress_c    (0xFFFFFFFFFFFFFFF3)
 
 #ifdef gPHY_802_15_4g_d
 #define mDefaultValueOfChannel_c (0x0001FFFF)

@@ -1183,8 +1183,8 @@ static void App_SendInformation( void )
         mpPacket->msgData.dataReq.pMsdu[1] = 0x01; /* marj: Satellite ID */
         mpPacket->msgData.dataReq.pMsdu[2] = 0x34; /* Satellite Password 2 */
         mpPacket->msgData.dataReq.pMsdu[3] = 0x12; /* Satellite Password 1 */
-        mpPacket->msgData.dataReq.pMsdu[4] = 0xCA; /* Message 2 */
-        mpPacket->msgData.dataReq.pMsdu[5] = 0xC0; /* Message 1 */
+        mpPacket->msgData.dataReq.pMsdu[4] = 0xBA; /* Message 2 */
+        mpPacket->msgData.dataReq.pMsdu[5] = 0xBA; /* Message 1 */
         /* Request MAC level acknowledgment of the data packet */
         mpPacket->msgData.dataReq.txOptions = gMacTxOptionsAck_c;
         /* Give the data packet a handle. The handle is
